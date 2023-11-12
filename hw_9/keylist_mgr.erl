@@ -16,31 +16,36 @@
   permanent = [] :: [pid()]
 }).
 
+%% @doc Starting keylist_mgr with monitor.
 -spec(start() -> {pid(), reference()}).
 start() ->
-  {Pid, Ref} = spawn_monitor(keylist_mgr, init, []),
-  {Pid, Ref}.
+  spawn_monitor(keylist_mgr, init, []).
 
 init() ->
   register(?MODULE, self()),
   process_flag(trap_exit, true),
   loop(#state{}).
 
+%% @doc Starting child-keylist with Params, where name - name of keylist, 
+%% permanent - type of keylist, if it's permanent it will be restarted after error or something.
 -spec(start_child(Params :: #{name => atom(), restart => permanent | temporary}) -> ok).
 start_child(Params) ->
   ?MODULE ! {self(), start_child, Params},
   ok.
 
+%% @doc Stopping child-keylist (even if it's permanent).
 -spec(stop_child(Name :: atom) -> ok). % Не стал добавлять Params вместо Name для удобства удаления
 stop_child(Name) ->
   ?MODULE ! {self(), stop_child, Name},
   ok.
 
+%% @doc Sending all names of child-keylists
 -spec(get_names() -> ok).
 get_names() ->
   ?MODULE ! {self(), get_names},
   ok.
 
+%% @doc Stopping keylist_mgr, but before it stops, it sending stop messages to his childrens 
 -spec(stop() -> ok).
 stop() ->
   ?MODULE ! stop,
@@ -54,7 +59,7 @@ loop(#state{childrens = Childrens, permanent = Permanent} = State) ->
         Pid when is_pid(Pid) ->
           From ! {error, already_registred},
           loop(State);
-        _ ->
+        undefined ->
           Pid = keylist:start_link(maps:get(name, Params)),
           NewState = case maps:get(restart, Params) of
                        permanent ->
@@ -68,7 +73,7 @@ loop(#state{childrens = Childrens, permanent = Permanent} = State) ->
     {From, stop_child, Name} -> 
       case whereis(Name) of
         Pid when is_pid(Pid) ->
-          exit(Pid, killed),
+          keylist:stop(Name),
           NewState = case lists:member(Pid, Permanent) of
                        true ->
                          State#state{childrens = lists:keydelete(Name, 1, Childrens), permanent = lists:delete(Pid, Permanent)};
@@ -76,7 +81,7 @@ loop(#state{childrens = Childrens, permanent = Permanent} = State) ->
                          State#state{childrens = lists:keydelete(Name, 1, Childrens)}
                      end,
           loop(NewState);
-        undefind ->
+        undefined ->
           From ! {error, no_such_process},
           loop(State)
 
@@ -85,7 +90,7 @@ loop(#state{childrens = Childrens, permanent = Permanent} = State) ->
       Names = proplists:get_keys(State#state.childrens),
       From ! Names,
       loop(State);
-    {'EXIT', Pid, Reason} ->
+    {'EXIT', Pid, Reason} when Reason =/= stopped, Reason =/= killed ->
       io:format("~p down with reason ~p~n", [Pid, Reason]),
       NewState = case lists:member(Pid, Permanent) of
                    true ->
@@ -98,12 +103,21 @@ loop(#state{childrens = Childrens, permanent = Permanent} = State) ->
                    false ->
                      State#state{childrens = lists:keydelete(Pid, 2, Childrens)}
                  end,
-      keylist_mgr ! {process_down, Pid, Reason},
+      loop(NewState);
+    {'EXIT', Pid, Reason} ->
+      io:format("~p down with reason ~p~n", [Pid, Reason]),
+      NewState = case lists:member(Pid, Permanent) of
+                   true ->
+                     State#state{childrens = lists:keydelete(Pid, 2, Childrens), permanent = lists:delete(Pid, Permanent)};
+                   false ->
+                     State#state{childrens = lists:keydelete(Pid, 2, Childrens)}
+                 end,
       loop(NewState);
     stop ->
-      terminate()
+      terminate(Childrens)
   end.
 
 %%% @private
-terminate() ->
-  exit(killed).
+terminate(Childrens) ->
+  lists:foreach(fun({Name, _Pid}) -> Name ! stop end, Childrens),
+  exit(stop).

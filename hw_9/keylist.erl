@@ -16,11 +16,13 @@
   counter = 0 :: integer() 
 }).
 
+%% @doc Starting keylist with monitor.
 -spec(start_monitor(Name :: atom()) -> {pid(), reference()}).
 start_monitor(Name) ->
   {Pid, Ref} = spawn_monitor(?MODULE, init, [Name]),
   {Pid, Ref}.
 
+%% @doc Starting keylist with link.
 -spec(start_link(Name :: atom()) -> pid()).
 start_link(Name) ->
   Pid = spawn_link(?MODULE, init, [Name]),
@@ -30,31 +32,37 @@ init(Name) ->
   register(Name, self()),
   loop(#state{}).
 
+%% @doc Adding new tuple {Key, Value} to keylist with name - Name.
 -spec(add(Name :: atom(), Key :: any(), Value :: any(), Comment :: string()) -> ok).
 add(Name, Key, Value, Comment) ->
   Name ! {self(), Key, Value, Comment},
   ok.
 
+%% @doc Checking if Key is member of keylist with name - Name.
 -spec(is_member(Name :: atom(), Key :: any()) -> ok).
 is_member(Name, Key) ->
   Name ! {self(), is_member, Key},
   ok.
 
+%% @doc Sending tuple {Key, Value} and deleting this tuple from keylist.
 -spec(take(Name :: atom(), Key :: any()) -> ok).
 take(Name, Key) ->
   Name ! {self(), take, Key},
   ok.
 
+%% @doc Sending tuple {Key, Value}.
 -spec(find(Name :: atom(), Key :: any()) -> ok).
 find(Name, Key) ->
   Name ! {self(), find, Key},
   ok.
 
+%% @doc Deleting tuple {Key, Value} from keylist with name - Name.
 -spec(delete(Name :: atom(), Key :: any()) -> ok).
 delete(Name, Key) ->
   Name ! {self(), Key},
   ok.
 
+%% @doc Stopping keylist.
 -spec(stop(Name :: atom()) -> ok).
 stop(Name) -> 
   Name ! stop,
@@ -89,6 +97,6 @@ loop(#state{list = List, counter = Counter} = State) ->
 
 %%% @private
 terminate() ->
-  exit(killed).
+  exit(stopped).
 
 
