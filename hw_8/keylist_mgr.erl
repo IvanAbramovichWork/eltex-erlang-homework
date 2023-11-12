@@ -6,8 +6,7 @@
   childrens = []}).
 
 start() ->
-  {Pid, Ref} = spawn_monitor(keylist_mgr, init, []),
-  {Pid, Ref}.
+  spawn_monitor(keylist_mgr, init, []).
 
 init() ->
   register(?MODULE, self()),
@@ -21,7 +20,7 @@ loop(#state{childrens = Childrens} = State) ->
         Pid when is_pid(Pid) ->
           From ! {error, already_registred},
           loop(State);
-        _ -> % если заменить _ на undefind программа упадет с =ERROR REPORT= ... {{case_clause,undefined} при отправке сообщения start_child
+        undefined -> 
           Pid = keylist:start_link(Name),
           NewState = State#state{childrens = [{Name, Pid} | Childrens]},
           From ! {ok, Pid},
@@ -33,7 +32,7 @@ loop(#state{childrens = Childrens} = State) ->
           exit(Pid, killed),
           NewState = State#state{childrens = lists:keydelete(Name, 1, Childrens)},
           loop(NewState);
-        undefind -> % а здесь почему то нет никаких проблем с undefind ¯\_(ツ)_/¯
+        undefined -> 
           From ! {error, no_such_process},
           loop(State)
       end;
@@ -47,8 +46,9 @@ loop(#state{childrens = Childrens} = State) ->
       keylist_mgr ! {process_down, Pid, Reason},
       loop(NewState);
     stop ->
-      terminate()
+      terminate(Childrens)
   end.
 
-terminate() ->
-  exit(killed).
+terminate(Childrens) ->
+  lists:foreach(fun({Name, _Pid}) -> Name ! stop end, Childrens),
+  exit(stop).
