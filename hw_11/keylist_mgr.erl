@@ -81,7 +81,7 @@ handle_info({'EXIT', Pid, Reason}, #state{childrens = Childrens, permanent = Per
   io:format("~p down with reason ~p~n", [Pid, Reason]),
   NewState = handle_new_state_when_other_reason(Pid, Permanent, Childrens, State),
   {noreply, NewState};
-handle_info({'DOWN', _Ref, process, Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) when Reason =/= shutdown, Reason =/= killed ->
+handle_info({'DOWN', _Ref, process, Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) when Reason =/= normal, Reason =/= killed ->
   io:format("~p down with reason ~p~n", [Pid, Reason]),
   NewState = handle_new_state_when_reason_killed(Pid, Permanent, Childrens, State),
   {noreply, NewState};
