@@ -1,8 +1,10 @@
 -module(keylist_mgr).
 
+-behaviour(gen_server).
+
 -export([start/0, start_child/1, stop_child/1, get_names/0, stop/0]).
 
--export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
 -record(state, {
   childrens = [] :: {Name :: atom(), pid()},
@@ -30,7 +32,7 @@ get_names() ->
 
 -spec(stop() -> ok).
 stop() ->
-  gen_server:cast(?MODULE, stop).
+  gen_server:stop(?MODULE).
 
 init([]) ->
   process_flag(trap_exit, true),
@@ -69,10 +71,9 @@ handle_cast({stop_child, Name}, #state{childrens = Childrens, permanent = Perman
       {noreply, State}
   end;
 handle_cast(stop, #state{childrens = _Childrens, permanent = _Permanent} = State) ->
-  terminate(shutdown, State),
   {noreply, State}.
 
-handle_info({'EXIT', Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) when Reason =/= shutdown, Reason =/= killed ->
+handle_info({'EXIT', Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) when Reason =/= normal, Reason =/= killed ->
   io:format("~p down with reason ~p~n", [Pid, Reason]),
   NewState = handle_new_state_when_reason_killed(Pid, Permanent, Childrens, State),
   {noreply, NewState};
@@ -110,9 +111,8 @@ handle_new_state_when_other_reason(Pid, Permanent, Childrens, State) ->
   end.
 
 
-terminate(shutdown, #state{childrens = Childrens, permanent = _Permanent} = _State) ->
-  lists:foreach(fun({Name, _Pid}) -> keylist:stop(Name) end, Childrens),
-  exit(shutdown),
+terminate(normal,  _State) ->
+  io:format("terminating~n"),
   ok.
 
 

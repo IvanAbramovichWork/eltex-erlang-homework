@@ -1,8 +1,10 @@
 -module(keylist).
 
+-behaviour(gen_server).
+
 -export([start_link/1, start_monitor/1, add/4, is_member/2, take/2, find/2, delete/2, stop/1]).
 
--export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
+-export([init/1, handle_call/3, handle_info/2, terminate/2]).
 
 -record(state,
 {
@@ -50,13 +52,12 @@ delete(NameOrPid, Key) ->
 
 -spec(stop(NameOrPid :: atom_or_pid()) -> ok).
 stop(NameOrPid) ->
-  gen_server:cast(NameOrPid, stop).
+  gen_server:stop(NameOrPid).
 
 init([]) ->
   {ok, #state{}}.
 
 handle_call({add, Key, Value, Comment}, _From, #state{list = List, counter = Counter} = State) ->
-  a + 1,
   NewState = State#state{list = [{Key, Value, Comment} | List], counter = Counter + 1},
   {reply, {ok, NewState#state.counter}, NewState};
 handle_call({is_member, Key}, _From, #state{list = List, counter = Counter} = State) ->
@@ -72,15 +73,11 @@ handle_call({delete, Key}, _From, #state{list = List, counter = Counter} = State
   NewState = State#state{list = lists:keydelete(Key, 1, List), counter = Counter + 1},
   {reply, {ok, State#state.counter}, NewState}.
 
-handle_cast(stop, State) ->
-  terminate(shutdown, State),
-  {noreply, State}.
-
 handle_info({added_new_child, Pid, Name}, State) ->
   io:format("added_new_child with pid: ~p and name: ~p~n", [Pid, Name]),
   {noreply, State}.
 
-terminate(shutdown, _State) ->
-  exit(shutdown),
+terminate(normal, _State) ->
+  io:format("terminating~n"),
   ok.
 
