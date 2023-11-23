@@ -55,6 +55,7 @@ stop(NameOrPid) ->
   gen_server:stop(NameOrPid).
 
 init([]) ->
+  process_flag(trap_exit, true),
   {ok, #state{}}.
 
 handle_call({add, Key, Value, Comment}, _From, #state{list = List, counter = Counter} = State) ->

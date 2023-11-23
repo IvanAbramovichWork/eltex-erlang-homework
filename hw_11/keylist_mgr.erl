@@ -75,22 +75,22 @@ handle_cast(stop, #state{childrens = _Childrens, permanent = _Permanent} = State
 
 handle_info({'EXIT', Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) when Reason =/= normal, Reason =/= killed ->
   io:format("~p down with reason ~p~n", [Pid, Reason]),
-  NewState = handle_new_state_when_reason_killed(Pid, Permanent, Childrens, State),
+  NewState = handle_proc_down(Reason, Pid, Permanent, Childrens, State),
   {noreply, NewState};
 handle_info({'EXIT', Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) ->
   io:format("~p down with reason ~p~n", [Pid, Reason]),
-  NewState = handle_new_state_when_other_reason(Pid, Permanent, Childrens, State),
+  NewState = handle_proc_down(Reason, Pid, Permanent, Childrens, State),
   {noreply, NewState};
 handle_info({'DOWN', _Ref, process, Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) when Reason =/= normal, Reason =/= killed ->
   io:format("~p down with reason ~p~n", [Pid, Reason]),
-  NewState = handle_new_state_when_reason_killed(Pid, Permanent, Childrens, State),
+  NewState = handle_proc_down(Reason, Pid, Permanent, Childrens, State),
   {noreply, NewState};
 handle_info({'DOWN', _Ref, process, Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) ->
   io:format("~p down with reason ~p~n", [Pid, Reason]),
-  NewState = handle_new_state_when_other_reason(Pid, Permanent, Childrens, State),
+  NewState = handle_proc_down(Reason, Pid, Permanent, Childrens, State),
   {noreply, NewState}.
 
-handle_new_state_when_reason_killed(Pid, Permanent, Childrens, State) ->
+handle_proc_down(Reason, Pid, Permanent, Childrens, State) when Reason =/= normal, Reason =/= killed ->
   case lists:member(Pid, Permanent) of
     true ->
       {Name, _Pid} = lists:keyfind(Pid, 2, Childrens),
@@ -101,9 +101,8 @@ handle_new_state_when_reason_killed(Pid, Permanent, Childrens, State) ->
       State#state{childrens = [{Name, NewPid} | NewChildrens], permanent = [NewPid | NewPermanent]};
     false ->
       State#state{childrens = lists:keydelete(Pid, 2, Childrens)}
-  end.
-
-handle_new_state_when_other_reason(Pid, Permanent, Childrens, State) ->
+  end;
+handle_proc_down(_Reason, Pid, Permanent, Childrens, State) ->
   case lists:member(Pid, Permanent) of
     true ->
       State#state{childrens = lists:keydelete(Pid, 2, Childrens), permanent = lists:delete(Pid, Permanent)};
