@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/2, start_monitor/2, add/4, is_member/2, take/2, find/2, delete/2, stop/1, match/2, match_object/2]).
+-export([start_link/2, start_monitor/2, add/4, is_member/2, take/2, find/2, delete/2, stop/1, match/2, match_object/2, select/2]).
 
 -export([init/1, handle_call/3, handle_info/2, terminate/2]).
 
@@ -63,6 +63,10 @@ match(NameOrPid, Pattern) ->
 match_object(NameOrPid, Pattern) ->
   gen_server:call(NameOrPid, {match_object, Pattern}).
 
+-spec(select(NameOrPid :: atom_or_pid(), Filter :: function()) -> {ok, list()}).
+select(NameOrPid, Filter) ->
+  gen_server:call(NameOrPid, {select, Filter}).
+
 -spec(stop(NameOrPid :: atom_or_pid()) -> ok).
 stop(NameOrPid) ->
   gen_server:stop(NameOrPid).
@@ -93,7 +97,10 @@ handle_call({match, Pattern}, _From, #state{ets = Tid, counter = Counter} = Stat
   {reply, {ok, ets:match(Tid, Pattern)}, NewState};
 handle_call({match_object, Pattern}, _From, #state{ets = Tid, counter = Counter} = State) ->
   NewState = State#state{counter = Counter + 1},
-  {reply, {ok, ets:match_delete(Tid, Pattern)}, NewState}.
+  {reply, {ok, ets:match_object(Tid, Pattern)}, NewState};
+handle_call({select, Filter}, _From, #state{ets = Tid, counter = Counter} = State) ->
+  NewState = State#state{counter = Counter + 1},
+  {reply, {ok, ets:select(Tid, ets:fun2ms(Filter))}, NewState}.
 
 handle_info({added_new_child, Pid, Name}, State) ->
   io:format("added_new_child with pid: ~p and name: ~p~n", [Pid, Name]),
