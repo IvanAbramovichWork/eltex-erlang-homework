@@ -82,10 +82,6 @@ handle_cast({stop_child, Name}, #state{childrens = Childrens, permanent = Perman
 handle_cast(stop, #state{childrens = _Childrens, permanent = _Permanent} = State) ->
   {noreply, State}.
 
-handle_info({'EXIT', Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) when Reason =/= normal, Reason =/= killed ->
-  io:format("~p down with reason ~p~n", [Pid, Reason]),
-  NewState = handle_proc_down(Reason, Pid, Permanent, Childrens, State),
-  {noreply, NewState};
 handle_info({'EXIT', Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) ->
   io:format("~p down with reason ~p~n", [Pid, Reason]),
   NewState = handle_proc_down(Reason, Pid, Permanent, Childrens, State),
@@ -93,11 +89,11 @@ handle_info({'EXIT', Pid, Reason}, #state{childrens = Childrens, permanent = Per
 handle_info({'DOWN', _Ref, process, Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) when Reason =/= normal, Reason =/= killed ->
   io:format("~p down with reason ~p~n", [Pid, Reason]),
   NewState = handle_proc_down(Reason, Pid, Permanent, Childrens, State),
-  {noreply, NewState};
-handle_info({'DOWN', _Ref, process, Pid, Reason}, #state{childrens = Childrens, permanent = Permanent} = State) ->
-  io:format("~p down with reason ~p~n", [Pid, Reason]),
-  NewState = handle_proc_down(Reason, Pid, Permanent, Childrens, State),
   {noreply, NewState}.
+
+terminate(normal,  _State) ->
+  io:format("terminating~n"),
+  ok.
 
 handle_proc_down(Reason, Pid, Permanent, Childrens, State) when Reason =/= normal, Reason =/= killed ->
   case lists:member(Pid, Permanent) of
@@ -119,9 +115,6 @@ handle_proc_down(_Reason, Pid, Permanent, Childrens, State) ->
   end.
 
 
-terminate(normal,  _State) ->
-  io:format("terminating~n"),
-  ok.
 
 
 
