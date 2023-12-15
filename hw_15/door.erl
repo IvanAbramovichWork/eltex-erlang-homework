@@ -67,21 +67,17 @@ callback_mode() ->
 
 locked({call, From}, {enter, Numbers}, #door_data{entered = Entered, code = Code, wrong_tries = WrongTries} = DoorData) ->
   NewEnteredCode = string:join([Entered] ++ [Numbers], ""),
-  if WrongTries == 2 ->
-    io:format("You entered wrong password 3 times, you will be suspended on 10 seconds~n"),
-    {next_state, suspended, DoorData#door_data{wrong_tries = 0, entered = []}, [{reply, From, {error, suspended}}, {state_timeout, 10000, lock}]};
-    true ->
-      if length(NewEnteredCode) =< length(Code) ->
-        case NewEnteredCode == Code of
-          true ->
-            {next_state, open, DoorData#door_data{entered = [], wrong_tries = 0}, [{reply, From, {ok, opened}}, {state_timeout, 10000, lock}]};
-          false ->
-            {keep_state, DoorData#door_data{entered = NewEnteredCode}, [{reply, From, {ok, next_numbers}}]}
-        end;
-        true ->
-          io:format("Wrong tries: ~p~n", [WrongTries + 1]),
-          {keep_state, DoorData#door_data{entered = [], wrong_tries = WrongTries + 1}, [{reply, From, {error, wrong_code}}]}
-      end
+  case {WrongTries, check_code(NewEnteredCode, Code)} of
+    {2, fail} ->
+      {next_state, suspended, DoorData#door_data{wrong_tries = 0, entered = []}, [{reply, From, {error, suspended}}, {state_timeout, 10000, lock}]};
+    {2, success} ->
+      {next_state, open, DoorData#door_data{entered = [], wrong_tries = 0}, [{reply, From, {ok, opened}}, {state_timeout, 10000, lock}]};
+    {_, in_process} ->
+      {keep_state, DoorData#door_data{entered = NewEnteredCode}, [{reply, From, {ok, next_numbers}}]};
+    {_, success} ->
+      {next_state, open, DoorData#door_data{entered = [], wrong_tries = 0}, [{reply, From, {ok, opened}}, {state_timeout, 10000, lock}]};
+    {_, fail} ->
+      {keep_state, DoorData#door_data{entered = [], wrong_tries = WrongTries + 1}, [{reply, From, {error, wrong_code}}]}
   end;
 locked({call, From}, change, _DoorData) ->
   io:format("You can't change password in locked state, open door first~n"),
@@ -123,3 +119,15 @@ suspended(state_timeout, lock, DoorData) ->
 terminate(normal, _, _DoorData) ->
   io:format("Terminating~n"),
   ok.
+
+check_code(NewEnteredCode, Code) when length(NewEnteredCode) < length(Code)->
+  in_process;
+
+check_code(NewEnteredCode, Code) when length(NewEnteredCode) > length(Code) ->
+  fail;
+
+check_code(NewEnteredCode, Code) when NewEnteredCode == Code ->
+  success;
+
+check_code(_NewEnteredCode, _Code) ->
+  fail.
