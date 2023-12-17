@@ -15,13 +15,12 @@ init([]) ->
   ChildSpecs =
     [#{id => keylist_mgr,
        start => {keylist_mgr, start_link, []},
-       restart => transient,
+       restart => permanent,
        shutdown => brutal_kill,
        type => worker},
      #{id => keylist_sup,
        start => {keylist_sup, start_link, []},
-       restart => transient,
+       restart => permanent,
        shutdown => brutal_kill,
-       significant => true,
        type => supervisor}],
   {ok, {SupFlags, ChildSpecs}}.

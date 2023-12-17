@@ -22,5 +22,5 @@ init([]) ->
   ChildSpecs =
     [#{id => keylist,
        start => {keylist, start_link, [Tid]},
-       restart => permanent}],
+       restart => transient}],
   {ok, {SupFlags, ChildSpecs}}.

@@ -33,7 +33,7 @@ start_monitor(Name, Tid) ->
 
 -spec(start_link(Name :: atom(), Tid :: atom() | reference()) -> start_ret()).
 start_link(Tid, Name) ->
-  gen_server:start_link({local, Name}, ?MODULE, Tid, []).
+  gen_server:start_link({local, Name}, ?MODULE, {Tid, Name}, []).
 
 -spec(add(NameOrPid :: atom_or_pid(), Key :: term(), Value :: term(),
     Comment :: string()) -> {ok, Counter :: integer()}).
@@ -71,8 +71,8 @@ select(NameOrPid, Filter) ->
 stop(NameOrPid) ->
   gen_server:stop(NameOrPid).
 
-init(Tid) ->
-  process_flag(trap_exit, true),
+init({Tid, Name}) ->
+  gen_server:cast(keylist_mgr, {register, Name, self()}),
   {ok, #state{ets = Tid}}.
 
 handle_call({add, Key, Value, Comment}, _From, #state{counter = Counter, ets = Tid} = State) ->
