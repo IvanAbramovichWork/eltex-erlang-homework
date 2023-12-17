@@ -72,7 +72,7 @@ stop(NameOrPid) ->
   gen_server:stop(NameOrPid).
 
 init({Tid, Name}) ->
-  gen_server:cast(keylist_mgr, {register, Name, self()}),
+  keylist_mgr:register(Name),
   {ok, #state{ets = Tid}}.
 
 handle_call({add, Key, Value, Comment}, _From, #state{counter = Counter, ets = Tid} = State) ->

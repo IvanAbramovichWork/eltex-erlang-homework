@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, start_child/1, stop_child/1, get_names/0, stop/0]).
+-export([start_link/0, start_child/1, stop_child/1, get_names/0, stop/0, register/1]).
 -export([init/1, terminate/2, handle_cast/2, handle_call/3, handle_info/2]).
 
 -define(KEYLIST_SUP, keylist_sup).
@@ -25,6 +25,9 @@ stop_child(Name) ->
 get_names() ->
   gen_server:call(?MODULE, get_names).
 
+register(Name) ->
+  gen_server:cast(keylist_mgr, {register, Name, self()}).
+
 -spec stop() -> ok.
 stop() ->
   gen_server:stop(?MODULE).
@@ -35,13 +38,12 @@ init([]) ->
 
 handle_call(get_names, _From, #state{childrens = Childrens} = State) ->
   {reply, {ok, proplists:get_keys(Childrens)}, State};
-handle_call({start_child, Name}, _From, #state{childrens = Childrens} = State) ->
-  NewState = State#state{childrens = [{Name, undefined} | Childrens]},
+handle_call({start_child, Name}, _From, #state{childrens = _Childrens} = State) ->
   case supervisor:start_child(?KEYLIST_SUP, [Name]) of
     {ok, _} ->
-      {reply, ok, NewState};
+      {reply, ok, State};
     {error, Reason} ->
-      {reply, {error, Reason}, NewState}
+      {reply, {error, Reason}, State}
   end.
 
 handle_cast({stop_child, Name}, #state{childrens = Childrens} = State) ->
