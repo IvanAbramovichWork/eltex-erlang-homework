@@ -1,9 +1,8 @@
-FROM erlang:20-alpine
+FROM erlang:21-alpine
 
 RUN mkdir /buildroot
 WORKDIR /buildroot
-RUN apk add --no-cache openssl
-RUN apk add git
+RUN apk add --no-cache openssl git make
 
 COPY webRtp webRtp
 
