@@ -1,7 +1,5 @@
 -module(hello_handler).
 
--behaviour(cowboy_handler).
-
 -export([init/2]).
 
 init(Req0, State) ->

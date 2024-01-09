@@ -9,7 +9,7 @@ COPY webRtp webRtp
 WORKDIR webRtp
 RUN rebar3 as prod release
 
-FROM alpine:3.17
+FROM alpine:3.15
 
 RUN apk add --no-cache openssl && \
     apk add --no-cache ncurses-libs && \

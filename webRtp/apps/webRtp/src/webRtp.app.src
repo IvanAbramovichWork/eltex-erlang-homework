@@ -5,7 +5,9 @@
   {mod, {webRtp_app, []}},
   {applications,
    [kernel,
-    stdlib
+    stdlib,
+    nksip,
+    cowboy
    ]},
   {env,[]},
   {modules, []},
