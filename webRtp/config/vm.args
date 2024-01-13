@@ -1,4 +1,5 @@
 -sname webRtp
+-mode interactive
 
 -setcookie webRtp_cookie
 

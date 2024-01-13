@@ -11,25 +11,23 @@
 
 -export([init/1]).
 
--define(SERVER, ?MODULE).
-
 start_link() ->
-    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-%% sup_flags() = #{strategy => strategy(),         % optional
-%%                 intensity => non_neg_integer(), % optional
-%%                 period => pos_integer()}        % optional
-%% child_spec() = #{id => child_id(),       % mandatory
-%%                  start => mfargs(),      % mandatory
-%%                  restart => restart(),   % optional
-%%                  shutdown => shutdown(), % optional
-%%                  type => worker(),       % optional
-%%                  modules => modules()}   % optional
 init([]) ->
-    SupFlags = #{strategy => one_for_all,
-                 intensity => 0,
-                 period => 1},
-    ChildSpecs = [],
-    {ok, {SupFlags, ChildSpecs}}.
+    Dispatch = cowboy_router:compile([
+        {'_', [{"/", hello_handler, []}]}
+    ]),
+    HTTP = ranch:child_spec(
+             cowboy_http, 100, ranch_tcp,
+             [{port, 8080}],
+             cowboy_clear,
+             #{env=>#{dispatch=>Dispatch}}),
+    Nksip1 = nksip:get_sup_spec(nksip_test_service, #{
+            sip_from => "sip:101@test.group",
+            plugins => [nksip_uac_auto_auth],
+            sip_listen => "sip:172.17.0.2:5060"
+        }),
+    {ok, {{one_for_one, 10, 10}, [HTTP, Nksip1]}}.
 
 %% internal functions
