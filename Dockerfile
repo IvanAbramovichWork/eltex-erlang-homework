@@ -19,7 +19,8 @@ RUN apk add --no-cache openssl && \
     apk add --no-cache gcc && \
     apk add --no-cache ortp-dev && \
     apk add --no-cache libc-dev && \
-    apk add --no-cache bctoolbox-dev 
+    apk add --no-cache bctoolbox-dev  && \
+    apk add --no-cache ffmpeg
 
 COPY --from=0 /buildroot/webRtp/_build/prod/rel/webRtp /webRtp
 COPY --from=0 /buildroot/webRtp/apps/webRtp/priv /webRtp/priv
