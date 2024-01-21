@@ -15,8 +15,12 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
+    db_abonents:start(),
+    db_abonents:add_test_abonents(),
     Dispatch = cowboy_router:compile([
-        {'_', [{"/", hello_handler, []}]}
+        {'_', [{"/", hello_handler, []},
+               {"/abonent/[:abonent_num]", abonent_handler, []},
+               {"/abonents", abonents_handler, []}]}
     ]),
     HTTP = ranch:child_spec(
              cowboy_http, 100, ranch_tcp,
