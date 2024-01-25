@@ -15,12 +15,12 @@ init(Req, State) ->
 handle_request(<<"GET">>, Req0) ->
   case cowboy_req:binding(abonent_num, Req0) of
         undefined ->
-            cowboy_req:reply(400, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"No number">>}, Req0));
+            cowboy_req:reply(400, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"No number">>}), Req0);
         Num when is_binary(Num) ->
             Num2 = list_to_integer(binary_to_list(Num)),
             case db_abonents:get_abonent(Num2) of
                 {error, _} ->
-                    cowboy_req:reply(404, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"No such abonent">>}, Req0));
+                    cowboy_req:reply(404, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"No such abonent">>}), Req0);
                 {abonents, Num2, Name} ->
                     Reply = jsone:encode(#{<<"num">> => Num2, <<"Name">> => list_to_binary(Name)}),
                     cowboy_req:reply(200, #{<<"content-type">> => <<"application/json">>}, Reply, Req0)
@@ -34,7 +34,7 @@ handle_request(<<"POST">>, Req0) ->
             Json = jsone:decode(Body),
             case length(Json) == 0 of
                 true ->
-                cowboy_req:reply(400, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"Empty body">>}, Req0));
+                cowboy_req:reply(400, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"Empty body">>}), Req0);
                 false ->
                     lists:foreach(fun(Abonent) ->
                                      Num = maps:get(<<"num">>, Abonent),
@@ -53,14 +53,15 @@ handle_request(<<"POST">>, Req0) ->
 handle_request(<<"DELETE">>, Req0) ->
   case cowboy_req:binding(abonent_num, Req0) of
         undefined ->
-            cowboy_req:reply(400, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"No number">>}, Req0));
+            cowboy_req:reply(400, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"No number">>}), Req0);
         Num when is_binary(Num) ->
             Num2 = list_to_integer(binary_to_list(Num)),
             case db_abonents:get_abonent(Num2) of
                 {error, _} ->
-                    cowboy_req:reply(404, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"No such abonent">>}, Req0));
+                    cowboy_req:reply(404, #{<<"content-type">> => <<"application/json">>}, jsone:encode(#{<<"result">> => <<"No such abonent">>}), Req0);
                 {abonents, Num2, Name} ->
                     Reply = jsone:encode(#{<<"num">> => Num2, <<"Name">> => list_to_binary(Name)}),
+                    db_abonents:delete_abonent(Num2),
                     cowboy_req:reply(200, #{<<"content-type">> => <<"application/json">>}, Reply, Req0)
             end
     end.
