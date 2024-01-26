@@ -26,7 +26,7 @@ srv_init(_Spec, State) ->
     {ok, 200, _} ->
       io:format("registered~n");
     _ ->
-      io:format("WARNING: not registred!~n")
+      register_srv()
   end,
   {ok, State}.
 
