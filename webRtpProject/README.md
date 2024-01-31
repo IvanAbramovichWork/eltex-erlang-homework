@@ -46,3 +46,7 @@ curl http://localhost:8080/call/abonent/102 -H "Accept: application/json"
 ```shell
 curl http://localhost:8080/call/broadcast -H "Accept: application/json"
 ```
+
+
+https://github.com/IvanAbramovichWork/eltex-erlang-homework/assets/110540101/fce59e22-8083-47e3-8190-a463460c0a61
+
