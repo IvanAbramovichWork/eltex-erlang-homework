@@ -22,28 +22,24 @@ call_abonent_async(Num) ->
   gen_server:cast(nksip_service, {async_call, Num}).
 
 srv_init(_Spec, State) ->
-  case register_srv() of
-    {ok, 200, _} ->
-      io:format("registered~n");
-    _ ->
-      register_srv()
-  end,
   {ok, State}.
 
 srv_handle_cast({async_call, Num}, _Service, State) ->
+  register_srv(),
   SDP =
     nksip_sdp:new("10.0.20.11", [{<<"audio">>, 9990, [{rtpmap, 0, "PCMU/8000"}, sendrecv]}]),
   CB =
     {callback,
-     fun({resp, Code, Req, _Call}) ->
+     fun({resp, Code, Resp, _Call}) ->
         case Code of
           200 ->
-            {ok, Meta} = nksip_response:body(Req),
-            {IpToConnect, PortToConnect} = parse_port_ip(Meta),
-            io:format("Port: ~p~n", [PortToConnect]),
-            send_rtp(IpToConnect, PortToConnect),
-            {ok, DialogId} = nksip_dialog:get_handle(Req),
-            nksip_uac:bye(DialogId, []);
+            {ok, Meta} = nksip_response:body(Resp),
+            spawn(fun() ->
+                     {IpToConnect, PortToConnect} = parse_port_ip(Meta),
+                     send_rtp(IpToConnect, PortToConnect),
+                     {ok, DialogId} = nksip_dialog:get_handle(Resp),
+                     nksip_uac:bye(DialogId, [])
+                  end);
           _ -> ok
         end
      end},
@@ -80,9 +76,17 @@ sip_bye(_Req, _Call) ->
   {reply, ok}.
 
 register_srv() ->
-  nksip_uac:register(nksip_service,
-                     "sip:10.0.20.11:5060",
-                     [{sip_pass, "1234"}, contact, {get_meta, [<<"contact">>]}]).
+  RegisterResult =
+    nksip_uac:register(nksip_service,
+                       "sip:10.0.20.11:5060",
+                       [{sip_pass, "1234"}, contact, {get_meta, [<<"contact">>]}]),
+  io:format("~p~n", [RegisterResult]),
+  case RegisterResult of
+    {ok, 200, _} ->
+      ok;
+    _ ->
+      register_srv()
+  end.
 
 -spec parse_port_ip(#sdp{}) -> {Ip :: string(), Port :: integer()}.
 parse_port_ip(Meta) ->
